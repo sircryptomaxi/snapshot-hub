@@ -7,6 +7,7 @@ import gossip from '../../helpers/gossip';
 import { pinJson } from '../../helpers/ipfs';
 import relayer, { issueReceipt } from '../../helpers/relayer';
 import pkg from '../../../package.json';
+import { getProposal } from '../../helpers/adapters/mysql';
 
 export default async function ingestor(body) {
   const ts = Date.now() / 1e3;
@@ -49,7 +50,13 @@ export default async function ingestor(body) {
   if (!msg.type || !Object.keys(writer).includes(msg.type))
     return Promise.reject('wrong message type');
 
-  if (!(await verifySignature(body.address, body.sig, hashMessage(body.msg))))
+  try {
+    const proposal = await getProposal(msg.space, msg.payload.proposal);
+  } catch (e) {
+    return Promise.reject(e);
+  }
+
+  if (!(await verifySignature(body.address, body.sig, hashMessage(body.msg)), proposal.network))
     return Promise.reject('wrong signature');
 
   try {
